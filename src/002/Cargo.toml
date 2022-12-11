@@ -1,0 +1,2 @@
+[workspace]
+members = ["main", "chain-core", "utils"]
