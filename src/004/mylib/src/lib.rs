@@ -5,61 +5,53 @@ use std::thread;
 
 struct Worker {
     id: usize,
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
-    // fn new(id, usize) -> Worker {
-    //     let thread = thread::spawn(move || {
-    //     });
-
-    //     Worker {
-    //         id,
-    //         thread,
-    //     }
-    // }
-
-    // fn new(id: usize, receiver: mpsc::Receiver<Job>) -> Worker {
-    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker {
         let thread = thread::spawn(move || loop {
-            let job = receiver.lock().unwrap().recv().unwrap();
-            println!("Worker {} got a job!", id);
-            job();
+            // let job = receiver.lock().unwrap().recv().unwrap();
+            let message = receiver.lock().unwrap().recv().unwrap();
+            match message {
+                Message::NewJob(job) => {
+                    println!("Worker {} receive a job", id);
+                    job();
+                }
+                Message::Terminate => {
+                    println!("Worker {} receive terminate", id);
+                    break;
+                }
+            }
         });
 
-        Worker { id, thread }
+        Worker {
+            id,
+            thread: Some(thread),
+        }
     }
 }
 
 pub struct ThreadPool {
-    // threads: Vec<thread::JoinHandle<()>>,
     workers: Vec<Worker>,
-    // Send the task
-    sender: mpsc::Sender<Job>,
+    // sender: mpsc::Sender<Job>, // Send the task
+    sender: mpsc::Sender<Message>,
 }
 
-// struct Job;
-// 定义 Job 为一个 Trait 对象
 type Job = Box<dyn FnOnce() + Send + 'static>;
+enum Message {
+    NewJob(Job),
+    Terminate,
+}
 
 impl ThreadPool {
     pub fn new(size: usize) -> ThreadPool {
         assert!(size > 0);
-        // let mut threads = Vec::with_capacity(size);
         let mut workers = Vec::with_capacity(size);
         let (sender, receiver) = mpsc::channel();
         let receiver = Arc::new(Mutex::new(receiver)); // Thread safety
 
-        // for _ in 0..size {
-        //     // let handle = thread::spawn(move || {
-
-        //     // });
-        //     // 创建线程时需要传入闭包，此时还不知道要处理什么任务，怎么办？
-        //     // threads.push(handle);
-        // }
-
         for id in 0..size {
-            // workers.push(Worker::new(id));
             workers.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
@@ -71,6 +63,24 @@ impl ThreadPool {
         F: FnOnce() + Send + 'static,
     {
         let job = Box::new(f);
-        self.sender.send(job).unwrap();
+        // self.sender.send(job).unwrap();
+        self.sender.send(Message::NewJob(job)).unwrap();
+    }
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        // Send terminate message to all workers
+        for _ in &mut self.workers {
+            self.sender.send(Message::Terminate).unwrap();
+        }
+
+        // Wait all workers terminate
+        for worker in &mut self.workers {
+            // Wiat for worker thread terminate
+            if let Some(thread) = worker.thread.take() {
+                thread.join().unwrap();
+            }
+        }
     }
 }
