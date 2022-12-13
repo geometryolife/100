@@ -1,3 +1,4 @@
+use mylib::ThreadPool;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -28,22 +29,26 @@ fn handle_client(mut stream: TcpStream) {
 
 fn main() -> std::io::Result<()> {
     let listener = TcpListener::bind("127.0.0.1:8080")?; // `?` means that the returned type is Result
-    let mut thread_vec: Vec<thread::JoinHandle<()>> = Vec::new();
+                                                         // let mut thread_vec: Vec<thread::JoinHandle<()>> = Vec::new();
+    let pool = ThreadPool::new(4);
 
     // accept connections and process them serially
     for stream in listener.incoming() {
         let stream = stream.unwrap();
         // Create a thread
-        let handle = thread::spawn(move || {
-            handle_client(stream);
-        });
+        // let handle = thread::spawn(move || {
+        //     handle_client(stream);
+        // });
 
-        thread_vec.push(handle);
+        // thread_vec.push(handle);
+
+        // Thread pool
+        pool.execute(|| handle_client(stream));
     }
 
-    for handle in thread_vec {
-        handle.join().unwrap();
-    }
+    // for handle in thread_vec {
+    //     handle.join().unwrap();
+    // }
 
     Ok(())
 }
