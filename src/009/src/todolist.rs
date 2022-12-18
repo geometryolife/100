@@ -1,4 +1,4 @@
-#[derive(Default, PartialEq)]
+#[derive(Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Enum {
     #[default]
     All,
@@ -6,6 +6,7 @@ pub enum Enum {
     Completed,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct TodoItem {
     pub title: String,
     pub active: bool,
@@ -28,7 +29,8 @@ impl TodoItem {
                 };
             } else {
                 ui.checkbox(&mut self.active, &self.title);
-                if ui.button("🖊").clicked(){ 
+                // if ui.button("🖊").clicked(){
+                if ui.button("Edit").clicked() {
                     self.edit = true;
                 };
             }

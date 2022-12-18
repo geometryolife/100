@@ -1,6 +1,6 @@
 use simple_todo::todolist::{Enum, TodoItem};
 
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct MyApp {
     addtodo: String,
     task: usize,
@@ -11,11 +11,10 @@ pub struct MyApp {
 
 impl MyApp {
     pub fn new(cc: &eframe::CreationContext) -> Self {
-        // Self::default()
         let mut data = Self::default();
-        // if let Some(storage) = cc.storage {
-        //     data = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        // }
+        if let Some(storage) = cc.storage {
+            data = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+        }
         // simple_todo::setup_custom_fonts(&cc.egui_ctx);
         data.del = -1;
         data
@@ -118,5 +117,9 @@ impl eframe::App for MyApp {
             self.show_content(ui);
         });
         self.dataupdate();
+    }
+
+    fn save(&mut self, _storage: &mut dyn eframe::Storage) {
+        eframe::set_value(_storage, eframe::APP_KEY, self);
     }
 }
