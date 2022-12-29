@@ -1,5 +1,6 @@
 use rusqlite::{params, Connection, Result};
 
+#[allow(unused)]
 #[derive(Debug)]
 struct SaleWithProduct {
     category: String,
@@ -36,7 +37,7 @@ fn create_db() -> Result<Connection> {
     Ok(conn)
 }
 
-fn populate_db(conn: &Connection) -> Result<()> {
+fn interpolate_db(conn: &Connection) -> Result<()> {
     conn.execute(
         "INSERT INTO Products (
             id, category, name
@@ -81,7 +82,7 @@ fn print_db(conn: &Connection) -> Result<()> {
 
 fn main() -> Result<()> {
     let conn = create_db()?;
-    populate_db(&conn)?;
+    interpolate_db(&conn)?;
     print_db(&conn)?;
     Ok(())
 }
